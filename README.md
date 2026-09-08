@@ -4,6 +4,16 @@
 
 Speed through water (STW), as measured by a paddlewheel log integrated into a B&G H5000 processor, is a foundational input to a racing sailboat's derived performance data — true wind, target speeds, VMG, and by extension tactical and trim decisions. On the vessel discussed here, STW is suspected — and on inspection, confirmed — to be systematically unreliable. This paper sets out the diagnostic reasoning developed over a working discussion: why the standard mitigations (manufacturer static compensation, a heel-based correction table, and GPS-referenced double-run calibration) each address only part of the error, why the residual error is dominated by leeway that is poorly correlated with heel on this hull form, and why the sailing area itself — strong, spatially and temporally variable current with unreliable tide-table prediction, and brackish, conductivity-variable water — defeats the usual GPS-based workarounds. It concludes with a proposed measurement architecture (direct two-axis flow sensing plus a joint, multi-variable calibration surface), a no-new-hardware fallback methodology (the two-tack leeway test), and a review of currently available hardware candidates with their known limitations.
 
+## Executive summary
+
+- **The problem.** Speed through water (STW) on this boat is unreliable under sail, and the two mitigations already in place — the H5000's internal compensation and a heel-based correction table — don't fix it.
+- **Why.** The dominant error isn't sensor drift, it's leeway: on this flat-bottomed, high-righting-moment hull, heel and leeway decouple (§3.2), so a heel-only correction table is fitting the wrong variable. Reciprocal-course ("double-run") calibration, already in use, fixes the paddlewheel's own offset/linearity but says nothing about leeway error (§3.3) — these are two different problems. A second confound, specific to this sailing area, is current: it's always present, spatially variable, and not predictable from tide tables, which defeats the usual GPS shortcuts for measuring either speed or leeway directly (§3.3).
+- **The fix, without new hardware.** The two-tack leeway test (§4.3) — a current-cancelling analog of the reciprocal-course test, applied to leeway instead of speed — builds a real, condition-tagged leeway dataset using only maneuvers the boat already does.
+- **The fix, with new hardware.** A direct two-axis (leeway-sensing) speed log removes the current confound entirely, and is the only approach that keeps working on long, unmaneuvered legs where GPS-based methods go blind (§8.2). Two real candidates exist — Airmar DX900+ and a Brickhouse Innovations design — each with one specific open risk to close out before buying (§6).
+- **The fix, with RTK-GNSS.** With accurate real-time SOG/COG/heading, current, leeway, and STW calibration can be solved continuously rather than through discrete maneuvers (§8) — but only while the boat keeps changing heading periodically; on this boat's long unmaneuvered offshore legs, it's structurally blind, same as GPS alone (§8.2). How much heading change is needed was tested, not assumed: ordinary tacks and gybes (roughly 2-90 degrees) work well; an exact 180-degree reciprocal course — intuitive because it's what the *speed* calibration test wants — is actually the *worst* case for separating leeway from current (§8.1).
+- **The decision.** The resulting continuous estimator should become the authoritative STW source, with the paddlewheel demoted to fallback, running with zero manual pre-race calibration and zero manual in-race math (§8.5) — self-calibrating from ordinary sailing, falling back gracefully (and visibly, via a published accuracy figure) when heading diversity runs out, and recovering automatically the moment it returns.
+- **Where this stands.** The diagnostic work here is finished. Implementation continues in **PerfectPitch** (see Status below).
+
 ## Status
 
 **This document is closed out as the standalone analysis.** The
@@ -16,18 +26,18 @@ resulting system can run with zero manual pre-race calibration and zero
 manual in-race math (Section 8.5 — yes, by construction, given continuous
 estimation rather than discrete maneuvers).
 
-All further work — implementation, simulation, firmware, and the
-illustrated worked walkthrough — happens in **PerfectPitch**, a
-moving-base RTK/IMU telemetry system for the same boat
-(`~/Documents/PerfectPitch`, private repo). The architecture in Sections
-5 and 8 here is written up as concrete, continuously-maintained design
-work in that project's `docs/wave-math.md` ("PerfectPitch as the STW
-authority" and "Authority and fallback" sections) and
-`docs/reliable-stw/README.md` (an illustrated, appendix-extended copy of
-this document, with the validated simulation results folded in), with
-matching tracked items in its `TODO.md`. This document is not expected to
-change further except to correct errors found later; treat PerfectPitch's
-copy as the living version.
+All further work — implementation, simulation, and firmware — happens
+in **PerfectPitch**, a moving-base RTK/IMU telemetry system for the same
+boat (`~/Documents/PerfectPitch`, private repo). The architecture in
+Sections 5 and 8 here is written up as concrete, continuously-maintained
+design work in that project's `docs/wave-math.md` ("PerfectPitch as the
+STW authority" and "Authority and fallback" sections) and
+`docs/reliable-stw/README.md` (an appendix-extended copy of this
+document, with a step-by-step worked walkthrough of the course-change
+mechanism added), with matching tracked items in its `TODO.md`. This
+document is not expected to change further except to correct errors
+found later; treat PerfectPitch's copy as the living, implementation-
+tracking version.
 
 ## 1. Introduction
 
@@ -77,7 +87,13 @@ Both apply a fixed heel-to-correction table. Empirically shown, via this program
 
 A direct analog of the reciprocal-course technique, applied to leeway instead of speed. Two tacks (port and starboard) are sailed at matched true wind angle, boat speed, heel, and trim mode, in close succession so that the current vector is approximately constant across both — the same assumption that underpins the reciprocal-course test. In the absence of leeway, the two ground tracks, referenced to the true wind direction, would be symmetric; the asymmetry between them isolates leeway without requiring the current to be known. Repeated across the boat's actual sail inventory, trim modes, and representative sea states, this generates a condition-tagged empirical leeway dataset far richer than a single heel curve, and can be used to fit a real multi-variable correction model even before any dedicated leeway sensor is fitted. This is recommended as a standing practice independent of any hardware decision.
 
+![Two mirrored tacks with a shared, unknown current vector: the asymmetry between the two ground tracks (relative to true wind) isolates leeway without ever needing to know the current's value.](images/two-tack-solving.svg)
+
 ## 5. Proposed measurement and calibration architecture
+
+![The vector identity SOG = W + C: the GNSS-measured speed-over-ground vector equals the true water-velocity vector (STW at a leeway-offset angle from heading) plus the current vector.](images/vector-triangle.svg)
+
+*Every method in this paper, from the two-tack test to the RTK-GNSS filter in Section 8, is one identity: what GPS measures over ground is the boat's true motion through the water plus whatever the water itself is doing (current). Solving for one unknown always means pinning down the other two first.*
 
 The diagnostic discussion converged on a specific target architecture, in three parts:
 
@@ -105,6 +121,8 @@ A general caveat applies to any electromagnetic sensor considered, including a f
 
 ## 8. RTK-GNSS continuous sensor fusion: what it can and cannot fix
 
+![System data flow: raw paddlewheel and RTK-GNSS heading/COG/SOG feed a continuous current/leeway/calibration solver, which publishes a corrected STW and a live accuracy figure, falling back toward the last-trusted paddlewheel calibration when accuracy degrades.](images/architecture-dataflow.svg)
+
 The planned upgrade to RTK-GNSS raises a natural question: with much more accurate real-time SOG, COG, and heading, can current, leeway, and STW calibration be estimated continuously in a closed-loop sensor-fusion scheme (e.g. an extended Kalman filter), rather than relying on discrete reciprocal-course or two-tack maneuvers? The answer is conditionally yes, and the conditions matter enough to state precisely, because they determine whether this approach can substitute for dedicated leeway-sensing hardware or only complement it.
 
 ### 8.1 The observability argument
@@ -114,6 +132,8 @@ At any single instant, the GNSS velocity vector (two components: north and east)
 Tacking (or gybing) supplies the missing information because it changes heading substantially while current stays essentially fixed over the maneuver, giving the filter independent equations to separate the two. This is the continuous, generalized version of the two-tack test described in Section 4.3.
 
 How large a heading change is "substantially"? This was a live open question during the RTK-GNSS discussion — the natural instinct is that an exact 180-degree (reciprocal-course) heading change, already used for the STW-magnitude calibration in Section 4.1, would also be the best case for separating leeway from current. It is not; it is the worst case, and this was tested rather than argued (Monte Carlo simulation at RTK-grade noise, implemented as `sim/heading_diversity_sweep.py` in PerfectPitch). The result is a monotonic relationship: leeway/current separation error is smallest at small heading changes and grows without bound as the heading change approaches 180 degrees — leeway RMS error of roughly 0.46 degrees at a 2-degree heading change, 0.97 degrees at 90 degrees, and 48 degrees at 178 degrees, with the underlying design matrix's condition number spiking from ~9 to over 500 across that same range. At exactly 180 degrees the second leg's equations become an exact algebraic duplicate of the first leg's, and all cross-track current information is lost — the opposite of the reciprocal-course test in Section 4.1, which specifically wants 180 degrees because that test cancels current by averaging along a fixed line to isolate STW sensor scale, a different unknown wanting the opposite geometry. The practical range that keeps leeway RMS error under 1 degree is roughly 2 to 90 degrees of heading change, which covers essentially any ordinary tack or gybe, including this vessel's unusually narrow tacking angle from its high pointing ability — a favorable, not unfavorable, property for this solver.
+
+![Leeway and current RMS estimation error versus heading change between two legs, log scale, at RTK-grade noise. Error is lowest at small heading changes and rises monotonically toward 180 degrees, where it spikes — the reciprocal course is the worst case for this solver, not the best.](images/heading-diversity-sweep.svg)
 
 An earlier version of this reasoning treated leeway as a "slowly varying, model-driven" quantity alongside STW sensor calibration, updated at a similar time constant to current. This is incorrect and worth correcting explicitly: leeway responds to gusts, wave impacts, and trim changes on a timescale of seconds, not the minutes-to-hours timescale on which current typically evolves. Conflating the two time constants in a filter risks either real current drift being misattributed to leeway, or genuine fast leeway swings (beyond what a static heel/speed model predicts) being misattributed to current — with no way for a GNSS-and-heading-only filter to tell which occurred.
 
@@ -139,13 +159,13 @@ The RTK-GNSS discussion closed on a concrete design requirement rather than a fu
 - **No manual math during a race.** The only number exposed to the crew is corrected STW plus a live accuracy figure (in knots, derived from the filter's own covariance) — never raw log values requiring arithmetic.
 - **Paddlewheel as fallback, not a second source.** The fused estimate is authoritative while its accuracy figure stays within a confidence threshold; when it degrades (most notably on the long unmaneuvered offshore legs of Section 8.2, where there is no heading excitation to refresh the estimate), the output blends toward the *last well-conditioned calibration factor* applied to the live raw paddlewheel reading — not the uncorrected paddlewheel signal this document opened by establishing as unreliable. True raw, uncalibrated paddlewheel is reserved for the one case where RTK itself is unavailable.
 
+![Estimator confidence over time: accuracy sharpens with each tack or gybe (fresh heading diversity) and decays smoothly through an unmaneuvered stretch, with the output blending from fused STW toward last-trusted-calibration paddlewheel as confidence degrades, and back again the moment a maneuver restores it.](images/confidence-decay.svg)
+
 This closes out the reasoning in this document: the remaining work is entirely implementation, and belongs in PerfectPitch (see "Authority and fallback" in `docs/wave-math.md` there for the full design, including the confidence-threshold blending logic).
 
 ## 9. Conclusion
 
-The unreliability of STW on this vessel is best explained not as a single fault but as the superposition of at least three distinct effects — paddlewheel sensor offset/linearity (correctable by reciprocal-course calibration, already in use), leeway-driven off-axis flow error (poorly predicted by heel on this hull form, and not addressed by reciprocal-course calibration at all), and boundary-layer sampling error — compounded by an operating environment where the usual GPS-based shortcuts for either speed or leeway ground-truth are confounded by persistent, unpredictable current. The path to a trustworthy, low-maintenance STW signal runs through direct two-axis flow sensing (or, absent that, systematic two-tack leeway testing) feeding a jointly fitted, multi-variable calibration surface — not through a better single-variable heel table. Available two-axis hardware exists and is broadly the right architecture, but each current candidate carries its own unresolved risk (mechanical/hull-material interference for one, unconfirmed conductivity compensation for the other) that should be closed out before committing.
-
-With RTK-GNSS added to the boat, the same reasoning extends from a diagnostic into a design: a continuously-running estimator can resolve current, leeway, and STW calibration together, become the authoritative STW source with the paddlewheel as fallback, and do so without any manual pre-race calibration or in-race math (Section 8.5) — subject to the hard observability limit on long unmaneuvered legs (Section 8.2), which is exactly where the dedicated two-axis sensor above remains the only complete fix. This paper's diagnostic work is done; the design and implementation of the RTK-based estimator continue in PerfectPitch.
+The unreliability of STW on this vessel is best explained not as a single fault but as the superposition of at least three distinct effects — paddlewheel sensor offset/linearity (correctable by reciprocal-course calibration, already in use), leeway-driven off-axis flow error (poorly predicted by heel on this hull form, and not addressed by reciprocal-course calibration at all), and boundary-layer sampling error — compounded by an operating environment where the usual GPS-based shortcuts for either speed or leeway ground-truth are confounded by persistent, unpredictable current. The path to a trustworthy, low-maintenance STW signal runs through direct two-axis flow sensing (or, absent that, systematic two-tack leeway testing) feeding a jointly fitted, multi-variable calibration surface — not through a better single-variable heel table. Available two-axis hardware exists and is broadly the right architecture, but each current candidate carries its own unresolved risk (mechanical/hull-material interference for one, unconfirmed conductivity compensation for the other) that should be closed out before committing. Section 8 extends this from diagnosis into design once RTK-GNSS is added; see the Executive summary above and Section 8.5 for where that lands.
 
 ## References
 

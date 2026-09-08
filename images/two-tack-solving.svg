@@ -1,0 +1,36 @@
+<svg viewBox="0 0 640 480" xmlns="http://www.w3.org/2000/svg" font-family="Helvetica, Arial, sans-serif">
+  <rect width="640" height="480" fill="#ffffff"/>
+  <defs>
+    <marker id="aW" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#3b4fa0"/></marker>
+    <marker id="aC" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0e7c86"/></marker>
+    <marker id="aS" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#c1440e"/></marker>
+  </defs>
+
+  <text x="320" y="30" text-anchor="middle" font-size="18" font-weight="600" fill="#111827">Two tacks, one current — the asymmetry isolates leeway</text>
+
+  <!-- panel 1: port tack -->
+  <text x="150" y="60" text-anchor="middle" font-size="14" font-weight="600" fill="#111827">Tack 1 (port)</text>
+  <line x1="150" y1="400" x2="150" y2="80" stroke="#9ca3af" stroke-width="2" stroke-dasharray="6,5"/>
+  <line x1="150" y1="400" x2="98" y2="156" stroke="#3b4fa0" stroke-width="3" marker-end="url(#aW)"/>
+  <line x1="98" y1="156" x2="168" y2="181" stroke="#0e7c86" stroke-width="3" marker-end="url(#aC)"/>
+  <line x1="150" y1="400" x2="168" y2="181" stroke="#c1440e" stroke-width="4" marker-end="url(#aS)"/>
+
+  <!-- panel 2: starboard tack (mirrored) -->
+  <text x="490" y="60" text-anchor="middle" font-size="14" font-weight="600" fill="#111827">Tack 2 (starboard)</text>
+  <line x1="490" y1="400" x2="490" y2="80" stroke="#9ca3af" stroke-width="2" stroke-dasharray="6,5"/>
+  <line x1="490" y1="400" x2="542" y2="156" stroke="#3b4fa0" stroke-width="3" marker-end="url(#aW)"/>
+  <line x1="542" y1="156" x2="612" y2="181" stroke="#0e7c86" stroke-width="3" marker-end="url(#aC)"/>
+  <line x1="490" y1="400" x2="612" y2="181" stroke="#c1440e" stroke-width="4" marker-end="url(#aS)"/>
+
+  <text x="320" y="250" text-anchor="middle" font-size="24" fill="#9ca3af">≈</text>
+
+  <rect x="20" y="300" width="600" height="26" fill="#0e7c86" opacity="0.12"/>
+  <text x="30" y="318" font-size="13" fill="#0e7c86" font-weight="600">Same C on both — sailed back-to-back, current has no time to change.</text>
+
+  <text x="20" y="350" font-size="13" fill="#3b4fa0">W (blue) is mirror-symmetric between tacks: same TWA, speed, heel — only sign of leeway flips.</text>
+  <text x="20" y="372" font-size="13" fill="#c1440e">SOG (red, measured) is the only thing that differs asymmetrically — that asymmetry is leeway, with C cancelled out.</text>
+
+  <rect x="10" y="404" width="620" height="60" fill="#f3f4f6"/>
+  <text x="20" y="424" font-size="13" fill="#374151">If leeway were zero, both tacks' tracks would be symmetric about true wind direction.</text>
+  <text x="20" y="444" font-size="13" fill="#374151">The asymmetry between them is directly attributable to leeway — solved without ever needing to know C.</text>
+</svg>

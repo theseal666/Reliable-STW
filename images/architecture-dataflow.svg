@@ -1,0 +1,65 @@
+<svg viewBox="0 0 640 470" xmlns="http://www.w3.org/2000/svg" font-family="Helvetica, Arial, sans-serif">
+  <rect width="640" height="470" fill="#ffffff"/>
+  <defs>
+    <marker id="af" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#111827"/></marker>
+  </defs>
+  <text x="320" y="26" text-anchor="middle" font-size="18" font-weight="600" fill="#111827">PerfectPitch as the STW/leeway authority — data flow</text>
+
+  <!-- input boxes -->
+  <g font-size="12" fill="#111827">
+    <rect x="15" y="50" width="140" height="60" rx="6" fill="#eef2ff" stroke="#3b4fa0"/>
+    <text x="85" y="75" text-anchor="middle" font-weight="600">Paddlewheel</text>
+    <text x="85" y="92" text-anchor="middle">N2K PGN 128259</text>
+
+    <rect x="170" y="50" width="140" height="60" rx="6" fill="#eef2ff" stroke="#3b4fa0"/>
+    <text x="240" y="75" text-anchor="middle" font-weight="600">N2K Compass</text>
+    <text x="240" y="92" text-anchor="middle">PGN 127250</text>
+
+    <rect x="325" y="50" width="160" height="60" rx="6" fill="#eef2ff" stroke="#3b4fa0"/>
+    <text x="405" y="72" text-anchor="middle" font-weight="600">3× RTK GNSS nodes</text>
+    <text x="405" y="88" text-anchor="middle">Bow / Port / Stbd</text>
+    <text x="405" y="102" text-anchor="middle">true heading + COG/SOG</text>
+
+    <rect x="500" y="50" width="125" height="60" rx="6" fill="#eef2ff" stroke="#3b4fa0"/>
+    <text x="562" y="75" text-anchor="middle" font-weight="600">IMU</text>
+    <text x="562" y="92" text-anchor="middle">master board</text>
+  </g>
+
+  <!-- arrows into center -->
+  <line x1="85" y1="110" x2="260" y2="195" stroke="#111827" stroke-width="1.5" marker-end="url(#af)"/>
+  <line x1="240" y1="110" x2="290" y2="195" stroke="#111827" stroke-width="1.5" marker-end="url(#af)"/>
+  <line x1="405" y1="110" x2="370" y2="195" stroke="#111827" stroke-width="1.5" marker-end="url(#af)"/>
+  <line x1="562" y1="110" x2="420" y2="195" stroke="#111827" stroke-width="1.5" marker-end="url(#af)"/>
+
+  <!-- central box -->
+  <rect x="140" y="200" width="360" height="90" rx="8" fill="#111827"/>
+  <text x="320" y="230" text-anchor="middle" font-size="15" font-weight="700" fill="#ffffff">PerfectPitch Master</text>
+  <text x="320" y="250" text-anchor="middle" font-size="12" fill="#d1d5db">attitude · true heading · COG/SOG</text>
+  <text x="320" y="266" text-anchor="middle" font-size="12" fill="#d1d5db">current / leeway / STW filter (Sections 8 &amp; "STW authority")</text>
+  <text x="320" y="282" text-anchor="middle" font-size="12" fill="#d1d5db">+ published accuracy figure</text>
+
+  <!-- arrows out -->
+  <line x1="230" y1="290" x2="130" y2="345" stroke="#111827" stroke-width="1.5" marker-end="url(#af)"/>
+  <line x1="320" y1="290" x2="320" y2="345" stroke="#111827" stroke-width="1.5" marker-end="url(#af)"/>
+  <line x1="410" y1="290" x2="520" y2="345" stroke="#111827" stroke-width="1.5" marker-end="url(#af)"/>
+
+  <!-- output boxes -->
+  <g font-size="12" fill="#111827">
+    <rect x="15" y="350" width="220" height="70" rx="6" fill="#ecfdf5" stroke="#0e7c86"/>
+    <text x="125" y="374" text-anchor="middle" font-weight="600">Signal K</text>
+    <text x="125" y="392" text-anchor="middle">corrected STW, leeway,</text>
+    <text x="125" y="408" text-anchor="middle">current, accuracy (± kn)</text>
+
+    <rect x="215" y="350" width="210" height="70" rx="6" fill="#ecfdf5" stroke="#0e7c86"/>
+    <text x="320" y="374" text-anchor="middle" font-weight="600">Expedition</text>
+    <text x="320" y="392" text-anchor="middle">Ethernet, 20Hz+</text>
+
+    <rect x="405" y="350" width="220" height="70" rx="6" fill="#fff7ed" stroke="#c1440e"/>
+    <text x="515" y="374" text-anchor="middle" font-weight="600">N2K re-publish</text>
+    <text x="515" y="392" text-anchor="middle">PGN 128259, 2nd source</text>
+    <text x="515" y="408" text-anchor="middle" fill="#c1440e">— later, see wave-math.md</text>
+  </g>
+
+  <rect x="10" y="430" width="620" height="30" fill="#f3f4f6"/>
+  <text x="20" y="449" font-size="12" fill="#374151">Signal K / Expedition are the primary path (they can carry the accuracy field). NMEA2000 plumbing is deferred — see wave-math.md.</text>
+</svg>

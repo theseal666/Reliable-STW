@@ -1,0 +1,54 @@
+<svg viewBox="0 0 640 340" xmlns="http://www.w3.org/2000/svg" font-family="Helvetica, Arial, sans-serif">
+  <rect width="640" height="340" fill="#ffffff"/>
+  <text x="320" y="26" text-anchor="middle" font-size="18" font-weight="600" fill="#111827">STW/leeway accuracy over a race day: sharp on tacks, decaying on a static leg</text>
+
+  <!-- zone backgrounds -->
+  <rect x="60" y="40" width="101.25" height="240" fill="#3b4fa0" opacity="0.08"/>
+  <rect x="161.25" y="40" width="405" height="240" fill="#9ca3af" opacity="0.12"/>
+  <rect x="566.25" y="40" width="33.75" height="240" fill="#3b4fa0" opacity="0.08"/>
+
+  <text x="110" y="55" text-anchor="middle" font-size="12" fill="#3b4fa0" font-weight="600">racing, constant tacks</text>
+  <text x="363" y="55" text-anchor="middle" font-size="12" fill="#6b7280" font-weight="600">12h offshore reach — no tacks</text>
+  <text x="583" y="55" text-anchor="middle" font-size="11" fill="#3b4fa0" font-weight="600">arrival</text>
+
+  <!-- axes -->
+  <line x1="60" y1="280" x2="600" y2="280" stroke="#111827" stroke-width="1.5"/>
+  <line x1="60" y1="40" x2="60" y2="280" stroke="#111827" stroke-width="1.5"/>
+  <text x="330" y="316" text-anchor="middle" font-size="13" fill="#374151">time (hours)</text>
+  <text x="20" y="160" text-anchor="middle" font-size="13" fill="#374151" transform="rotate(-90 20 160)">STW/leeway accuracy (± kn)</text>
+
+  <!-- y gridlines/labels -->
+  <text x="50" y="284" text-anchor="end" font-size="11" fill="#6b7280">0</text>
+  <text x="50" y="224" text-anchor="end" font-size="11" fill="#6b7280">0.3</text>
+  <text x="50" y="164" text-anchor="end" font-size="11" fill="#6b7280">0.6</text>
+  <text x="50" y="104" text-anchor="end" font-size="11" fill="#6b7280">0.9</text>
+  <text x="50" y="48" text-anchor="end" font-size="11" fill="#6b7280">1.2</text>
+
+  <!-- x labels -->
+  <text x="60" y="296" text-anchor="middle" font-size="11" fill="#6b7280">0</text>
+  <text x="161" y="296" text-anchor="middle" font-size="11" fill="#6b7280">3h</text>
+  <text x="330" y="296" text-anchor="middle" font-size="11" fill="#6b7280">9h</text>
+  <text x="566" y="296" text-anchor="middle" font-size="11" fill="#6b7280">15h</text>
+  <text x="600" y="296" text-anchor="middle" font-size="11" fill="#6b7280">16h</text>
+
+  <!-- accuracy curve -->
+  <polyline fill="none" stroke="#c1440e" stroke-width="3"
+    points="60,220 66.75,256 80.25,260 93.75,262 107.25,260 120.75,262 134.25,260 147.75,262 161.25,260 195,230 262.5,190 330,156 397.5,124 465,96 532.5,70 566.25,60 576.375,250 600,256" />
+
+  <!-- tick marks for tacks -->
+  <g fill="#3b4fa0">
+    <circle cx="66.75" cy="256" r="3.5"/>
+    <circle cx="80.25" cy="260" r="3.5"/>
+    <circle cx="93.75" cy="262" r="3.5"/>
+    <circle cx="107.25" cy="260" r="3.5"/>
+    <circle cx="120.75" cy="262" r="3.5"/>
+    <circle cx="134.25" cy="260" r="3.5"/>
+    <circle cx="147.75" cy="262" r="3.5"/>
+    <circle cx="161.25" cy="260" r="3.5"/>
+    <circle cx="576.375" cy="250" r="3.5"/>
+  </g>
+  <text x="110" y="272" font-size="10" fill="#3b4fa0" text-anchor="middle">tacks reset accuracy</text>
+
+  <rect x="10" y="300" width="620" height="30" fill="#f3f4f6"/>
+  <text x="20" y="319" font-size="12" fill="#374151">Each dot is a tack/gybe: fresh heading-change information sharpens the estimate. No maneuvers → uncertainty grows through the leg, then resets on the next tack.</text>
+</svg>
