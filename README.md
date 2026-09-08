@@ -4,6 +4,19 @@
 
 Speed through water (STW), as measured by a paddlewheel log integrated into a B&G H5000 processor, is a foundational input to a racing sailboat's derived performance data — true wind, target speeds, VMG, and by extension tactical and trim decisions. On the vessel discussed here, STW is suspected — and on inspection, confirmed — to be systematically unreliable. This paper sets out the diagnostic reasoning developed over a working discussion: why the standard mitigations (manufacturer static compensation, a heel-based correction table, and GPS-referenced double-run calibration) each address only part of the error, why the residual error is dominated by leeway that is poorly correlated with heel on this hull form, and why the sailing area itself — strong, spatially and temporally variable current with unreliable tide-table prediction, and brackish, conductivity-variable water — defeats the usual GPS-based workarounds. It concludes with a proposed measurement architecture (direct two-axis flow sensing plus a joint, multi-variable calibration surface), a no-new-hardware fallback methodology (the two-tack leeway test), and a review of currently available hardware candidates with their known limitations.
 
+## Status
+
+This analysis is being operationalized in **PerfectPitch**, a moving-base
+RTK / IMU telemetry system for the same boat (`~/Documents/PerfectPitch`,
+not yet public). The architecture in Sections 5 and 8 — the joint
+(STW, leeway, heel) calibration surface, the observability argument, the
+position-indexed current prior, and the ground-wind cross-check — is
+written up as concrete design work in that project's
+`docs/wave-math.md` ("PerfectPitch as the STW authority" and "Ground
+wind" sections), with matching tracked items in its `TODO.md`. This
+document remains the standalone reference for the reasoning; PerfectPitch
+is where it gets built.
+
 ## 1. Introduction
 
 The vessel is an extreme, flat-bottomed, high-pointing design instrumented with a B&G H5000 processor and a paddlewheel STW sensor. There is strong operational evidence — inconsistent derived performance numbers, and decisions made downstream of them that later proved wrong — that the STW signal is not trustworthy. Two mitigations were already in place: the H5000's own rudimentary internal STW compensation, and the SignalK "speed and current" plugin, which applies a static speed/heel correction table. Neither was judged adequate by the crew, and the working hypothesis going in was that leeway — the sideways component of the boat's motion through the water — was the primary unmodeled variable.
