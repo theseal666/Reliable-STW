@@ -6,16 +6,28 @@ Speed through water (STW), as measured by a paddlewheel log integrated into a B&
 
 ## Status
 
-This analysis is being operationalized in **PerfectPitch**, a moving-base
-RTK / IMU telemetry system for the same boat (`~/Documents/PerfectPitch`,
-not yet public). The architecture in Sections 5 and 8 — the joint
-(STW, leeway, heel) calibration surface, the observability argument, the
-position-indexed current prior, and the ground-wind cross-check — is
-written up as concrete design work in that project's
-`docs/wave-math.md` ("PerfectPitch as the STW authority" and "Ground
-wind" sections), with matching tracked items in its `TODO.md`. This
-document remains the standalone reference for the reasoning; PerfectPitch
-is where it gets built.
+**This document is closed out as the standalone analysis.** The
+diagnostic question it set out to answer — why STW is unreliable on this
+boat, and what would fix it — is answered (Sections 1-9 below), including
+the two open technical questions raised during the RTK-GNSS discussion:
+how large a course change actually separates leeway from current
+(Section 8.1 — validated by simulation, not just argued), and whether the
+resulting system can run with zero manual pre-race calibration and zero
+manual in-race math (Section 8.5 — yes, by construction, given continuous
+estimation rather than discrete maneuvers).
+
+All further work — implementation, simulation, firmware, and the
+illustrated worked walkthrough — happens in **PerfectPitch**, a
+moving-base RTK/IMU telemetry system for the same boat
+(`~/Documents/PerfectPitch`, private repo). The architecture in Sections
+5 and 8 here is written up as concrete, continuously-maintained design
+work in that project's `docs/wave-math.md` ("PerfectPitch as the STW
+authority" and "Authority and fallback" sections) and
+`docs/reliable-stw/README.md` (an illustrated, appendix-extended copy of
+this document, with the validated simulation results folded in), with
+matching tracked items in its `TODO.md`. This document is not expected to
+change further except to correct errors found later; treat PerfectPitch's
+copy as the living version.
 
 ## 1. Introduction
 
@@ -101,6 +113,8 @@ At any single instant, the GNSS velocity vector (two components: north and east)
 
 Tacking (or gybing) supplies the missing information because it changes heading substantially while current stays essentially fixed over the maneuver, giving the filter independent equations to separate the two. This is the continuous, generalized version of the two-tack test described in Section 4.3.
 
+How large a heading change is "substantially"? This was a live open question during the RTK-GNSS discussion — the natural instinct is that an exact 180-degree (reciprocal-course) heading change, already used for the STW-magnitude calibration in Section 4.1, would also be the best case for separating leeway from current. It is not; it is the worst case, and this was tested rather than argued (Monte Carlo simulation at RTK-grade noise, implemented as `sim/heading_diversity_sweep.py` in PerfectPitch). The result is a monotonic relationship: leeway/current separation error is smallest at small heading changes and grows without bound as the heading change approaches 180 degrees — leeway RMS error of roughly 0.46 degrees at a 2-degree heading change, 0.97 degrees at 90 degrees, and 48 degrees at 178 degrees, with the underlying design matrix's condition number spiking from ~9 to over 500 across that same range. At exactly 180 degrees the second leg's equations become an exact algebraic duplicate of the first leg's, and all cross-track current information is lost — the opposite of the reciprocal-course test in Section 4.1, which specifically wants 180 degrees because that test cancels current by averaging along a fixed line to isolate STW sensor scale, a different unknown wanting the opposite geometry. The practical range that keeps leeway RMS error under 1 degree is roughly 2 to 90 degrees of heading change, which covers essentially any ordinary tack or gybe, including this vessel's unusually narrow tacking angle from its high pointing ability — a favorable, not unfavorable, property for this solver.
+
 An earlier version of this reasoning treated leeway as a "slowly varying, model-driven" quantity alongside STW sensor calibration, updated at a similar time constant to current. This is incorrect and worth correcting explicitly: leeway responds to gusts, wave impacts, and trim changes on a timescale of seconds, not the minutes-to-hours timescale on which current typically evolves. Conflating the two time constants in a filter risks either real current drift being misattributed to leeway, or genuine fast leeway swings (beyond what a static heel/speed model predicts) being misattributed to current — with no way for a GNSS-and-heading-only filter to tell which occurred.
 
 ### 8.2 The failure case: long, unmaneuvered offshore legs
@@ -117,9 +131,21 @@ Where a dedicated sensor is not yet fitted, a partial mitigation is available fo
 
 STW error does not propagate equally into every wind number the system produces, which is relevant given that True Wind Direction is one of the primary derived values this program acts on. The conventional shipboard "true wind" — the number underlying polar targets and target boat speeds — is computed from apparent wind combined with velocity *through water* (STW and heading), and is therefore fully exposed to every error discussed in this paper. A second, less commonly displayed quantity, sometimes called "ground wind," is computed from apparent wind combined with velocity *over ground* (SOG/COG). With RTK-GNSS, this second number becomes highly trustworthy independent of STW or leeway entirely, since it never uses the paddlewheel or leeway model. It is not the number polars are built around, and it is not identical to true wind relative to the water mass when current is present, but it provides a genuinely STW-independent cross-check — useful for alignment with earth-referenced weather data (GRIB forecasts), and as a real-time health indicator: an implausible divergence between water-referenced true wind and ground wind is itself a signal of STW/leeway error worth surfacing on display, once RTK is fitted.
 
+### 8.5 Design decision: full STW authority, paddlewheel as fallback, zero manual intervention
+
+The RTK-GNSS discussion closed on a concrete design requirement rather than a further open question: PerfectPitch's corrected STW should not merely offer a second opinion alongside the paddlewheel — it should take over STW duties as the primary, authoritative source, with the raw paddlewheel demoted to fallback, and it must do so **without a dedicated pre-race calibration procedure and without any manual math during a race**. This is a stronger requirement than "continuous estimation" alone implies, so it is worth stating explicitly as the conclusion of this line of reasoning:
+
+- **No manual pre-race calibration.** A continuous estimator does not need a discrete calibration procedure to get started — it needs heading diversity, and an ordinary pre-start sequence and first beat already supply that (Section 8.1's validated 2-90 degree safe range covers essentially any real tack). The filter starts from a wide-uncertainty prior and tightens automatically as the boat sails normally; there is no dockside or pre-start ritual to perform.
+- **No manual math during a race.** The only number exposed to the crew is corrected STW plus a live accuracy figure (in knots, derived from the filter's own covariance) — never raw log values requiring arithmetic.
+- **Paddlewheel as fallback, not a second source.** The fused estimate is authoritative while its accuracy figure stays within a confidence threshold; when it degrades (most notably on the long unmaneuvered offshore legs of Section 8.2, where there is no heading excitation to refresh the estimate), the output blends toward the *last well-conditioned calibration factor* applied to the live raw paddlewheel reading — not the uncorrected paddlewheel signal this document opened by establishing as unreliable. True raw, uncalibrated paddlewheel is reserved for the one case where RTK itself is unavailable.
+
+This closes out the reasoning in this document: the remaining work is entirely implementation, and belongs in PerfectPitch (see "Authority and fallback" in `docs/wave-math.md` there for the full design, including the confidence-threshold blending logic).
+
 ## 9. Conclusion
 
 The unreliability of STW on this vessel is best explained not as a single fault but as the superposition of at least three distinct effects — paddlewheel sensor offset/linearity (correctable by reciprocal-course calibration, already in use), leeway-driven off-axis flow error (poorly predicted by heel on this hull form, and not addressed by reciprocal-course calibration at all), and boundary-layer sampling error — compounded by an operating environment where the usual GPS-based shortcuts for either speed or leeway ground-truth are confounded by persistent, unpredictable current. The path to a trustworthy, low-maintenance STW signal runs through direct two-axis flow sensing (or, absent that, systematic two-tack leeway testing) feeding a jointly fitted, multi-variable calibration surface — not through a better single-variable heel table. Available two-axis hardware exists and is broadly the right architecture, but each current candidate carries its own unresolved risk (mechanical/hull-material interference for one, unconfirmed conductivity compensation for the other) that should be closed out before committing.
+
+With RTK-GNSS added to the boat, the same reasoning extends from a diagnostic into a design: a continuously-running estimator can resolve current, leeway, and STW calibration together, become the authoritative STW source with the paddlewheel as fallback, and do so without any manual pre-race calibration or in-race math (Section 8.5) — subject to the hard observability limit on long unmaneuvered legs (Section 8.2), which is exactly where the dedicated two-axis sensor above remains the only complete fix. This paper's diagnostic work is done; the design and implementation of the RTK-based estimator continue in PerfectPitch.
 
 ## References
 
